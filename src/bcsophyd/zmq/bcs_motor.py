@@ -25,7 +25,7 @@ from ophyd        import PositionerBase
 from ophyd.status import Status
 
 # BCS Includes
-from bcs_server import BCSServer
+from .bcs_server import BCSServer
 
 # A custom motor class for Bluesky that integrates with the BCS system via ZeroMQ.
 # It extends the Ophyd Device and PositionerBase classes, enabling seamless integration
