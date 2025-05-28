@@ -19,7 +19,7 @@ import zmq
 import zmq.asyncio
 
 # BCS Includes
-from bcs_server import BCSServer
+from .bcs_server import BCSServer
 
 # A class to manage the Happi client 
 # and populate it with devices (e.g., motors and analog inputs)
