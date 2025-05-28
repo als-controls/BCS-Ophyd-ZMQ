@@ -19,6 +19,9 @@ dependencies = [
   "happi"
 ]
 
+[project.optional-dependencies]
+dev = ["bluesky", "matplotlib"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
