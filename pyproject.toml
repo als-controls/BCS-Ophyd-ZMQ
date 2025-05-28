@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bcsophyd"
+version = "0.1.0"
+description = "A package for interacting with the Beamline Control System (BCS) using ZeroMQ."
+authors = [
+  { name="Joao Gabriel Felipe Machado Gazolla", email="gabrielgazolla@lbl.gov" }
+]
+license = { text = "MIT" }  # TODO: is this the license you want?
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "ophyd",
+  "pyzmq",
+  "asyncio",
+  "happi"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.urls]
+"Homepage" = "https://git.als.lbl.gov/bcs/bluesky/bcsophyd-zmq"
+"Bug Tracker" = "https://git.als.lbl.gov/bcs/bluesky/bcsophyd-zmq/-/issues"
+
+[tool.hatch.version]
+source = "vcs"

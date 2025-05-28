@@ -9,7 +9,7 @@ import time       # For timestamps
 from ophyd.signal import Signal
 
 # BCS Includes
-from bcs_server import BCSServer
+from .bcs_server import BCSServer
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
