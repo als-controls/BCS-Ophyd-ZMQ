@@ -1,5 +1,7 @@
 # Python Includes
 
+# For sanitization
+import re
 # Module for writing asynchronous functions and managing event loops
 import asyncio
 # For parsing and generating JSON data
@@ -48,6 +50,9 @@ class BCSDeviceManager:
         
         # Initialize the Happi client (this is synchronous)
         self.client = self.create_client()
+
+        # Device names that have been seen
+        self.seen_names = dict()
     
     # Async method to connect to server and populate data
     async def connect(self):
@@ -264,8 +269,8 @@ class BCSDeviceManager:
                 # and lower case to create in happyDB
                 originalName = name
 
-                # Removes spaces and makes it lower case
-                name = name.replace(" ", "_").lower()
+                # sanitize name
+                name = self._sanitize_name(name)
 
                 general_params   = motor.get("General Parameters", {})
                 itemType         = "motor"
@@ -300,7 +305,7 @@ class BCSDeviceManager:
 
                     # More Parameters
                     item_cls=OphydItem,
-                    device_class="bcs_motor.BCSMotor",
+                    device_class="bcsophyd.zmq.bcs_motor.BCSMotor",
                     name=name.replace(" ", "_"),
                     prefix="MOTOR:FAKEPREFIX:",
                     bridgeIP=self.host,
@@ -387,8 +392,8 @@ class BCSDeviceManager:
                 # and lower case to create in happyDB
                 originalName = name
 
-                # Removes spaces and makes it lower case
-                name = name.replace(" ", "_").lower()
+                # sanitize name
+                name = self._sanitize_name(name)
 
                 general_settings = ai.get("General Settings", {})
                 itemType         = "ai"
@@ -425,7 +430,7 @@ class BCSDeviceManager:
                     # More Parameters
                     bridgeIP=self.host,
                     bridgePort=str(self.port),
-                    device_class="bcs_signal.BCSSignal",
+                    device_class="bcsophyd.zmq.bcs_signal.BCSSignal",
                     item_cls=OphydItem,
                     itemType=itemType,
                     name=name,
@@ -452,3 +457,15 @@ class BCSDeviceManager:
                 print(f"✓ Added AI: {name}")
             
             print(f"✓ Successfully processed {len(ai_data)} analog inputs")
+
+    def _sanitize_name(self, name: str) -> str:
+        # Sanitize name
+        new_name = re.sub('\W|^(?=\d)','_', name).lower()
+
+        if name in self.seen_names:
+            RuntimeError(f"A name collision occurred between new device {name}(-> {new_name}) and a device named "
+                         f"{self.seen_names[new_name]}(-> {new_name}. This should be corrected in the LabVIEW device "
+                         f"setup. Keep in mind that names will be sanitized to be a lowercase valid python identifiers")
+        else:
+            self.seen_names[new_name] = name
+        return new_name

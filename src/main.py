@@ -53,17 +53,17 @@ from happi import Client, OphydItem, from_container
 # BCS Includes
 
 # BCS Includes
-from src.bcsophyd.zmq.bcs_server import BCSServer
+from bcsophyd.zmq.bcs_server import BCSServer
 
 # BCS 2D Detector uses FastaAPI
-from src.bcsophyd.zmq.bcs_area_detector import BCSAreaDetector
+from bcsophyd.zmq.bcs_area_detector import BCSAreaDetector
 # Device manager for Happi database integration
-from src.bcsophyd.zmq.bcs_device_manager import BCSDeviceManager
+from bcsophyd.zmq.bcs_device_manager import BCSDeviceManager
 
 # BCS-specific motor implementation
-from src.bcsophyd.zmq.bcs_motor import BCSMotor
+from bcsophyd.zmq.bcs_motor import BCSMotor
 # BCS-specific signal implementation
-from src.bcsophyd.zmq.bcs_signal import BCSSignal
+from bcsophyd.zmq.bcs_signal import BCSSignal
 
 async def classTest_BCSDeviceManager(host, port):
 
