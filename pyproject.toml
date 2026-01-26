@@ -13,10 +13,11 @@ license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+  "click",
+  "happi",
+  "loguru",
   "ophyd",
   "pyzmq",
-  "happi",
-  "loguru"
 ]
 
 [project.optional-dependencies]
@@ -43,6 +44,9 @@ tests = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+bcsophyd = "bcsophyd.cli:main"
 
 [project.urls]
 "Homepage" = "https://git.als.lbl.gov/bcs/bluesky/bcsophyd-zmq"

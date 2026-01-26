@@ -40,6 +40,53 @@ pip install -e ".[docs]"
 pip install -e ".[tests]"
 ```
 
+## Command-Line Interface
+
+After installation, the `bcsophyd` command is available for testing connections and listing devices.
+
+### Test connection
+
+```bash
+# Test connection to default localhost:5577
+bcsophyd test
+
+# Test connection to specific host
+bcsophyd test --host 192.168.195.129 --port 5577
+
+# With verbose output
+bcsophyd -v test --host 192.168.195.129
+```
+
+### List available devices
+
+```bash
+# List all devices
+bcsophyd devices --host 192.168.195.129
+
+# List only motors
+bcsophyd devices --host 192.168.195.129 --no-signals
+
+# List only analog inputs
+bcsophyd devices --host 192.168.195.129 --no-motors
+
+# Output as JSON
+bcsophyd devices --host 192.168.195.129 --json
+```
+
+### Read a device value
+
+```bash
+# Read current value of a device
+bcsophyd read --host 192.168.195.129 motor_1
+```
+
+### Help
+
+```bash
+bcsophyd --help
+bcsophyd devices --help
+```
+
 ## Quick Start
 
 ### Connect to BCS and discover devices
@@ -111,9 +158,11 @@ asyncio.run(read_signal())
 ## Requirements
 
 - Python >= 3.9
+- click
+- happi
+- loguru
 - ophyd
 - pyzmq
-- happi
 
 ## Documentation
 
