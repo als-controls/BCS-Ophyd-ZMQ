@@ -1,27 +1,15 @@
 # Python Includes
-
-# For handling asynchronous operations
 import asyncio
-# Math
-import math
-# For Operating System Calls
-import os
-# Threads
-from   threading import Thread
 import threading
-# For time-based operations (e.g., delays)
 import time
+from datetime import datetime
+from threading import Thread
 
-# For timestamping
-from   datetime import datetime 
+from loguru import logger
 
 # Ophyd Includes
-
-# Base class for hardware devices in Bluesky
-from ophyd        import Device
-# Base class for positioners (e.g., motors)
-from ophyd        import PositionerBase
-# Tracks the status of asynchronous operations
+from ophyd import Device
+from ophyd import PositionerBase
 from ophyd.status import Status
 
 # BCS Includes
@@ -34,8 +22,7 @@ class BCSMotor(Device, PositionerBase):
 
     # Constructor
     def __init__(self, *args, **kwargs):
-
-        print("BCSMotor - __init__() - Start.")
+        logger.debug("BCSMotor - __init__() - Start.")
 
         # Initialize the parent classes
         # The super() call ensures that the parent classes (Device and PositionerBase)
@@ -43,7 +30,7 @@ class BCSMotor(Device, PositionerBase):
         # The `name` parameter identifies the motor within the Bluesky framework.
         super().__init__(name=kwargs["name"])
 
-        # Initialize attributes specific to BCSMotor            
+        # Initialize attributes specific to BCSMotor
         self.name         = kwargs["name"]          # example: "motor_2"
         self.originalName = kwargs["originalName"]  # example: "Motor 2"
         self.itemType     = kwargs["itemType"]
@@ -51,8 +38,8 @@ class BCSMotor(Device, PositionerBase):
         self.units        = kwargs["units"]
 
         # For ZeroMQ server connection
-        print("bridgeIP"  , kwargs["bridgeIP"])
-        print("bridgePort", kwargs["bridgePort"])
+        logger.debug(f"bridgeIP: {kwargs['bridgeIP']}")
+        logger.debug(f"bridgePort: {kwargs['bridgePort']}")
 
         self.host         = kwargs["bridgeIP"]
         self.port         = int(kwargs["bridgePort"])
@@ -66,6 +53,10 @@ class BCSMotor(Device, PositionerBase):
         self.velocity     = 0
         self.acceleration = 0
 
+        # Motor timing parameters (required by PositionerBase)
+        self.timeout      = kwargs.get("timeout", 60.0)      # Default 60 second timeout
+        self.settle_time  = kwargs.get("settle_time", 0.0)   # Default no settle time
+
         # Motor status flags
         self.isMoving     = False
         self.moveComplete = True
@@ -73,16 +64,16 @@ class BCSMotor(Device, PositionerBase):
         # Use a lock to prevent concurrent access to the ZeroMQ server
         self._lock = threading.Lock()
 
-        print("BCSMotor - __init__() - End.")
+        logger.debug("BCSMotor - __init__() - End.")
 
     # Ensure connection to the ZeroMQ server
     async def _ensure_connected(self):
         """Ensure connection to the ZeroMQ server before making requests"""
         if not self._connected:
-            print(f"BCSMotor - Connecting to ZeroMQ server at {self.host}:{self.port}")
+            logger.debug(f"BCSMotor - Connecting to ZeroMQ server at {self.host}:{self.port}")
             await self.bcs_server.connect(self.host, self.port)
             self._connected = True
-            print(f"BCSMotor - Connected to ZeroMQ server at {self.host}:{self.port}")
+            logger.debug(f"BCSMotor - Connected to ZeroMQ server at {self.host}:{self.port}")
 
     # Overload print behavior for better debugging
     def __str__(self):
@@ -125,8 +116,8 @@ class BCSMotor(Device, PositionerBase):
 
         }
 
-        print(tempDescription)
-        
+        logger.debug(f"Motor description: {tempDescription}")
+
         return tempDescription
 
     # Synchronous method to get the motor position - useful for testing
@@ -134,11 +125,11 @@ class BCSMotor(Device, PositionerBase):
         """
         Synchronous method to get the motor position.
         This provides a simpler interface for basic testing.
-        
+
         Returns:
             float: The current position of the motor
         """
-        print(f"BCSMotor - get() - Returning current position: {self._position}")
+        logger.debug(f"BCSMotor - get() - Returning current position: {self._position}")
         return self._position
 
     def move(self, new_position, wait=True, timeout=None):
@@ -149,20 +140,20 @@ class BCSMotor(Device, PositionerBase):
         :param wait: If True, blocks until the motor finishes moving.
         :param timeout: Maximum time to wait for the move to complete.
         """
-        print("BCSMotor - move() - Start")
+        logger.debug("BCSMotor - move() - Start")
 
         # Set motor to moving state
         self.moveComplete = False
         self.isMoving     = True
 
         # Start the motor movement
-        print(f"BCSMotor - move() - Calling zmq_move_motor({self.originalName}, {new_position})")        
+        logger.debug(f"BCSMotor - move() - Calling zmq_move_motor({self.originalName}, {new_position})")
         self.zmq_move_motor([self.originalName], [new_position])
 
         # Initialize an Ophyd.Status object to track the move progress
         # self.monitor_motor_status receives a status object
         # to update when move is done.
-        print("BCSMotor - move() - Creating Ophyd Status Object to Track Move.")
+        logger.debug("BCSMotor - move() - Creating Ophyd Status Object to Track Move.")
         status = Status()
 
         # Start a thread to monitor the motor status
@@ -174,15 +165,14 @@ class BCSMotor(Device, PositionerBase):
 
         # Wait for the monitoring thread to finish if wait=True
         if wait:
-            print("BCSMotor - move() - Waiting for monitor_motor_status to check if motor reached target position.")            
+            logger.debug("BCSMotor - move() - Waiting for monitor_motor_status to check if motor reached target position.")
             monitor_thread_instance.join(timeout)
 
-        print("BCSMotor - move() - End.")
-        
+        logger.debug("BCSMotor - move() - End.")
+
         return status
 
     def monitor_motor_status(self, target_position, status, timeout=None, check_interval=0.1):
-
         """
         Monitors the motor's internal attributes periodically to determine when the move is complete.
 
@@ -192,20 +182,19 @@ class BCSMotor(Device, PositionerBase):
             timeout (float): Maximum time (in seconds) to wait for the move to complete.
             check_interval (float): Time interval (in seconds) between status checks.
         """
-
-        print("BCSMotor - monitor_motor_status() - Start.")
+        logger.debug("BCSMotor - monitor_motor_status() - Start.")
 
         start_time = time.time()
 
         try:
             while True:
-                print("BCSMotor - monitor_motor_status() - Checking status...")
+                logger.trace("BCSMotor - monitor_motor_status() - Checking status...")
 
                 # Check for timeout
                 elapsed_time = time.time() - start_time
 
                 if timeout and elapsed_time > timeout:
-                    print("BCSMotor - monitor_motor_status() - Timeout.")
+                    logger.warning("BCSMotor - monitor_motor_status() - Timeout.")
                     status.set_exception(TimeoutError("BCSMotor - monitor_motor_status() - Timeout."))
                     break
 
@@ -214,11 +203,11 @@ class BCSMotor(Device, PositionerBase):
 
                 diff = abs(self._position - target_position)
 
-                print(f"BCSMotor - monitor_motor_status() - Current Position: {self._position}, Target: {target_position}, Move Complete: {self.moveComplete}, Diff: {diff}")
+                logger.trace(f"BCSMotor - monitor_motor_status() - Current Position: {self._position}, Target: {target_position}, Move Complete: {self.moveComplete}, Diff: {diff}")
 
                 # Check if the motor has reached the target position and stopped moving
                 if self.moveComplete:
-                    print("BCSMotor - monitor_motor_status() - Move Complete.")
+                    logger.debug("BCSMotor - monitor_motor_status() - Move Complete.")
                     status.set_finished()
                     break
 
@@ -226,31 +215,31 @@ class BCSMotor(Device, PositionerBase):
                 time.sleep(check_interval)
 
         except Exception as e:
-            print(f"BCSMotor - monitor_motor_status() - Error: {e}")
+            logger.error(f"BCSMotor - monitor_motor_status() - Error: {e}")
             status.set_exception(e)
 
-        print("BCSMotor - monitor_motor_status() - End.")
+        logger.debug("BCSMotor - monitor_motor_status() - End.")
 
     @property
     def position(self):
-        print("=== position() ===")
+        logger.trace("=== position() ===")
         return self._position
 
     # Return the converted motor position as an Ophyd Signal
     async def read(self):
-        print("BCSMotor - read() - Start.")
-        print("BCSMotor - read() - Calling self.zmq_get_motor_full_async(self.originalName)")
+        logger.debug("BCSMotor - read() - Start.")
+        logger.debug("BCSMotor - read() - Calling self.zmq_get_motor_full_async(self.originalName)")
 
         # Query the full motor information, including the position
         # Use the async version of the method to avoid the name collision
         queryResult = await self.zmq_get_motor_full_async(self.originalName)
 
-        print("BCSMotor - read() - Query Results Received.")
+        logger.debug("BCSMotor - read() - Query Results Received.")
 
         # Generate a timestamp
         timestamp = datetime.now().isoformat()  # ISO 8601 format for compatibility
 
-        print("BCSMotor - read() - Reading Raw Motor Position.")
+        logger.debug("BCSMotor - read() - Reading Raw Motor Position.")
         
         # Extract the converted motor position
         converted_motor_position = queryResult[0]['Raw Motor Position']
@@ -258,7 +247,7 @@ class BCSMotor(Device, PositionerBase):
         # Updates internal position
         self._position = converted_motor_position
         
-        print(f"BCSMotor - read() - Raw Motor Position: {round(self._position, 3)}.")
+        logger.debug(f"BCSMotor - read() - Raw Motor Position: {round(self._position, 3)}.")
 
         # Ophyd Signal
         tempSignal = {
@@ -268,37 +257,37 @@ class BCSMotor(Device, PositionerBase):
             }
         }
 
-        print("BCSMotor - read() - End...")
+        logger.debug("BCSMotor - read() - End...")
 
         return tempSignal
 
     # Intention to move the motor to the given position
     def set(self, position):
-        print(f"BCSMotor - set({position}) - Now we call move()...")
-        print(f"BCSMotor - move({position}) - Calling it...")        
+        logger.debug(f"BCSMotor - set({position}) - Now we call move()...")
+        logger.debug(f"BCSMotor - move({position}) - Calling it...")        
         return self.move(position, wait=True)
     
     def stop(self, *, success=False):
         name = self.originalName
         
-        print(f"BCSMotor - stop({name}) - Start")
+        logger.debug(f"BCSMotor - stop({name}) - Start")
 
         self.zmq_stop_motor([self.originalName])
 
         """Simulate stopping the motor."""
         self.isMoving = False
 
-        print(f"BCSMotor - stop({name}) - End")
+        logger.debug(f"BCSMotor - stop({name}) - End")
     
     # Updates the internal attributes of the motor by querying the current motor status
     # from the ZeroMQ endpoint and parsing it.
     def update(self):
 
-        print("BCSMotor - update() - start...")
+        logger.trace("BCSMotor - update() - start...")
 
         try:
             # Query the motor's full data
-            print("BCSMotor - update() - Calling self.zmq_get_motor_full")
+            logger.trace("BCSMotor - update() - Calling self.zmq_get_motor_full")
             list_result = self.zmq_get_motor_full(self.originalName)
 
             # The query returns a list with a single element
@@ -313,7 +302,7 @@ class BCSMotor(Device, PositionerBase):
             self._position = fullDictionary.get('Raw Motor Position', self._position)
             
         except Exception as e:
-            print(f"update() - Error: {e}")
+            logger.error(f"update() - Error: {e}")
 
     ###########################
     ###   ZeroMQ Wrappers   ###
@@ -332,7 +321,7 @@ class BCSMotor(Device, PositionerBase):
             list: List of motor data dictionaries
         """
 
-        print(f"BCSMotor - zmq_get_motor_full_async({motor_name}) - Start.")
+        logger.debug(f"BCSMotor - zmq_get_motor_full_async({motor_name}) - Start.")
         
         # Ensure we have a connection to the server
         await self._ensure_connected()
@@ -348,14 +337,14 @@ class BCSMotor(Device, PositionerBase):
         # Parse the response
         motor_data = self.parse_get_motor_full(response)
         
-        print(f"BCSMotor - zmq_get_motor_full_async({motor_name}) - End.")
+        logger.debug(f"BCSMotor - zmq_get_motor_full_async({motor_name}) - End.")
         return motor_data
 
     # Thread-safe wrapper for getting motor information
     def zmq_get_motor_full(self, motor_name):
         
         """Thread-safe wrapper for getting motor information (sync version)"""
-        print(f"BCSMotor - zmq_get_motor_full({motor_name}) (Thread wrapper) - Start.")
+        logger.debug(f"BCSMotor - zmq_get_motor_full({motor_name}) (Thread wrapper) - Start.")
 
         # Use a mutable container to store the result from the asynchronous operation
         result_container = {}
@@ -375,7 +364,7 @@ class BCSMotor(Device, PositionerBase):
         if not motorFullData:
             raise RuntimeError(f"Failed to get motor data for {motor_name}")
             
-        print(f"BCSMotor - zmq_get_motor_full({motor_name}) (Thread wrapper) - End.")
+        logger.debug(f"BCSMotor - zmq_get_motor_full({motor_name}) (Thread wrapper) - End.")
         return motorFullData
         
     # Internal async method for getting motor data
@@ -388,7 +377,7 @@ class BCSMotor(Device, PositionerBase):
     # Thread-safe method to move motor using ZeroMQ
     def zmq_move_motor(self, motors, goals):
         """Thread-safe method to move motors using ZeroMQ"""
-        print(f"BCSMotor - zmq_move_motor({motors[0]}, {goals[0]}) - Start.")
+        logger.debug(f"BCSMotor - zmq_move_motor({motors[0]}, {goals[0]}) - Start.")
 
         # Define a function to execute the asynchronous operation in a new thread
         def runInThread():
@@ -399,7 +388,7 @@ class BCSMotor(Device, PositionerBase):
         thread.start()
         thread.join()
 
-        print(f"BCSMotor - zmq_move_motor({motors[0]}, {goals[0]}) - End.")
+        logger.debug(f"BCSMotor - zmq_move_motor({motors[0]}, {goals[0]}) - End.")
         
     # Internal async method for moving motors
     async def _zmq_move_motor_async(self, motors, goals):
@@ -423,7 +412,7 @@ class BCSMotor(Device, PositionerBase):
     def zmq_stop_motor(self, motors):
         """Thread-safe method to stop motors using ZeroMQ"""
         motors_str = ", ".join(motors)
-        print(f"BCSMotor - zmq_stop_motor([{motors_str}]) - Start.")
+        logger.debug(f"BCSMotor - zmq_stop_motor([{motors_str}]) - Start.")
 
         # Define a function to execute the asynchronous operation in a new thread
         def runInThread():
@@ -434,7 +423,7 @@ class BCSMotor(Device, PositionerBase):
         thread.start()
         thread.join()
 
-        print(f"BCSMotor - zmq_stop_motor([{motors_str}]) - End.")
+        logger.debug(f"BCSMotor - zmq_stop_motor([{motors_str}]) - End.")
         
     # Internal async method for stopping motors
     async def _zmq_stop_motor_async(self, motors):
@@ -453,7 +442,7 @@ class BCSMotor(Device, PositionerBase):
     # Parses the response of the `get_motor_full` ZeroMQ call
     def parse_get_motor_full(self, input_data):
         """Parse the motor data response from ZeroMQ"""
-        print("BCSMotor - parse_get_motor_full() - Start.")
+        logger.debug("BCSMotor - parse_get_motor_full() - Start.")
 
         # Check if 'success' is True
         if not input_data.get('success', False):
@@ -464,6 +453,6 @@ class BCSMotor(Device, PositionerBase):
         if not data:
             raise ValueError("No data found in the response.")
         
-        print("BCSMotor - parse_get_motor_full() - End.")
+        logger.debug("BCSMotor - parse_get_motor_full() - End.")
 
         return data

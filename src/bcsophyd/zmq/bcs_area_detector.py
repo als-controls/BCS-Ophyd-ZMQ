@@ -1,10 +1,12 @@
+import threading
+import time
+
+from loguru import logger
 from ophyd import Component as Cpt
 from ophyd import Device, Component, Signal
-from ophyd.device import Kind 
+from ophyd.device import Kind
 from ophyd.signal import Signal, SignalRO
 from ophyd.status import DeviceStatus
-import time
-import threading
 
 class BCSAreaDetector(Device):
 
@@ -17,7 +19,7 @@ class BCSAreaDetector(Device):
     def __init__(self, *args, **kwargs): #NormalScan #FlyingScan
 
         """Initialize detector with simple 3x3 static patterns"""
-        print("BCSAreaDetector - __init__")
+        logger.debug("BCSAreaDetector - __init__")
 
         super().__init__(*args, **kwargs)
 
@@ -39,7 +41,7 @@ class BCSAreaDetector(Device):
     def acquire_frame(self, status): #NormalScan
 
         """Acquire a single frame and update status"""
-        print("BCSAreaDetector - acquire_frame()")
+        logger.debug("BCSAreaDetector - acquire_frame()")
         # Get current pattern
         pattern = self._patterns[self._pattern_idx % len(self._patterns)]
         self._pattern_idx += 1
@@ -59,7 +61,7 @@ class BCSAreaDetector(Device):
         Yields dictionaries containing data and metadata.
         """
 
-        print("BCSAreaDetector - collect()")
+        logger.debug("BCSAreaDetector - collect()")
 
         if not self._flying:
             return
@@ -83,7 +85,7 @@ class BCSAreaDetector(Device):
     def complete(self): #NotInNormalScan #FlyingScan
 
         """End flying mode and return status"""
-        print("BCSAreaDetector - complete()")
+        logger.debug("BCSAreaDetector - complete()")
         if not self._flying:
             raise RuntimeError("Device is not flying")
             
@@ -99,7 +101,7 @@ class BCSAreaDetector(Device):
         Returns metadata about the detector's signals.
         """
 
-        print("BCSAreaDetector - describe()")
+        logger.debug("BCSAreaDetector - describe()")
 
         return {
             f'{self.name}_image': {
@@ -120,7 +122,7 @@ class BCSAreaDetector(Device):
         Describe the data structure for fly scans.
         Returns metadata about the collected data.
         """
-        print("BCSAreaDetector - describe_collect()")
+        logger.debug("BCSAreaDetector - describe_collect()")
 
         return {
             'primary': {
@@ -139,7 +141,7 @@ class BCSAreaDetector(Device):
         Returns status object.
         """
 
-        print("BCSAreaDetector - kickoff()")
+        logger.debug("BCSAreaDetector - kickoff()")
         if not self._staged:
             self.stage()
             
@@ -155,7 +157,7 @@ class BCSAreaDetector(Device):
         Read current values for normal scans.
         Returns dictionary with current values and timestamps.
         """
-        print("BCSAreaDetector - read()")
+        logger.debug("BCSAreaDetector - read()")
         return {
             f'{self.name}_image': {
                 'value': self.image.get(),
@@ -174,7 +176,7 @@ class BCSAreaDetector(Device):
         Returns list containing self.
         """
 
-        print("BCSAreaDetector - stage()")
+        logger.debug("BCSAreaDetector - stage()")
 
         if self._staged:
             return [self]
@@ -204,7 +206,7 @@ class BCSAreaDetector(Device):
         Returns status object.
         """
 
-        print("BCSAreaDetector - trigger()")
+        logger.debug("BCSAreaDetector - trigger()")
 
         if not self._staged:
             raise RuntimeError("Device must be staged before triggering")
@@ -225,7 +227,7 @@ class BCSAreaDetector(Device):
         Returns list containing self.
         """
 
-        print("BCSAreaDetector - unstage()")
+        logger.debug("BCSAreaDetector - unstage()")
 
         if not self._staged:
             return [self]

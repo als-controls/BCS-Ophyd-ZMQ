@@ -15,7 +15,8 @@ requires-python = ">=3.9"
 dependencies = [
   "ophyd",
   "pyzmq",
-  "happi"
+  "happi",
+  "loguru"
 ]
 
 [project.optional-dependencies]

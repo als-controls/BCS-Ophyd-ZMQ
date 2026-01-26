@@ -1,19 +1,12 @@
 # Python Includes
-
-# For sanitization
-import re
-# Module for writing asynchronous functions and managing event loops
 import asyncio
-# For parsing and generating JSON data
 import json
-# For interacting with the operating system
 import os
-# Import sys for exiting the software
+import re
 import sys
-# For measuring elapsed time
 import time
 
-# Happy Includes
+from loguru import logger
 
 # Happi client for managing device metadata
 from happi import Client, OphydItem
@@ -71,16 +64,13 @@ class BCSDeviceManager:
             self._connected = True
             return True
         except Exception as e:
-            # Log the error and provide feedback
-            print("")
-            print(f"Error during initialization: {e}")
-            print("Possible solutions:")
-            print("")
-            print("- Check if BCS ZeroMQ server is running...")
-            print(f"- Check if you can connect to ZeroMQ at {self.host}:{self.port}")
-            print("- Check if Labview is running on the BCS server machine...")
-            print(f"- Check if you can ping {self.host}")
-            print("- Check your connectivity...")
+            logger.error(f"Error during initialization: {e}")
+            logger.info("Possible solutions:")
+            logger.info("- Check if BCS ZeroMQ server is running...")
+            logger.info(f"- Check if you can connect to ZeroMQ at {self.host}:{self.port}")
+            logger.info("- Check if Labview is running on the BCS server machine...")
+            logger.info(f"- Check if you can ping {self.host}")
+            logger.info("- Check your connectivity...")
             return False
     
     # Creates and initializes a Happi client, managing the device database.
@@ -88,58 +78,58 @@ class BCSDeviceManager:
         # Check if the file exists and delete it
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
-            print(f"Existing file '{self.db_path}' has been deleted.")
+            logger.debug(f"Existing file '{self.db_path}' has been deleted.")
 
         # Initialize the client
         client = Client(path=self.db_path)
-        print(f"Happi client initialized with database: {self.db_path}")
+        logger.debug(f"Happi client initialized with database: {self.db_path}")
 
         return client
 
     # Asynchrounous check if we can connect to the server
     async def check_server_connection_async(self):
         """Check if the BCS ZeroMQ server is accessible asynchronously"""
-        print(f"Testing connection to BCS server at {self.host}:{self.port}...")
-        
+        logger.info(f"Testing connection to BCS server at {self.host}:{self.port}...")
+
         # Create a simple ZeroMQ REQ socket to test connection
         context = zmq.asyncio.Context()
         socket = context.socket(zmq.REQ)
-        
+
         # Set timeout to prevent hanging
         socket.setsockopt(zmq.RCVTIMEO, self.timeout_ms)
-        
+
         try:
             # Connect to the server
-            print("socket.connect")
+            logger.debug("socket.connect")
             socket.connect(f'tcp://{self.host}:{self.port}')
-            
+
             # Try to send the 'public' request (this is what BCSServer does internally)
-            print("socket.send (public)")
+            logger.debug("socket.send (public)")
             await socket.send(b'public')
-            
+
             # Wait for a response
             response = await socket.recv()
-            
+
             if response:
-                print(f"✓ Successfully connected to BCS server at {self.host}:{self.port}")
+                logger.success(f"Successfully connected to BCS server at {self.host}:{self.port}")
                 return True
-                
+
         except zmq.error.Again:
             # Timeout occurred - no response from server
-            print(f"✗ ERROR: No response from BCS server at {self.host}:{self.port} (timeout after {self.timeout_ms/1000} seconds)")
-            print("\nThe server may be down or unreachable. Please check your connection and try again.")
+            logger.error(f"No response from BCS server at {self.host}:{self.port} (timeout after {self.timeout_ms/1000} seconds)")
+            logger.info("The server may be down or unreachable. Please check your connection and try again.")
             return False
-            
+
         except Exception as e:
             # Other connection errors
-            print(f"✗ ERROR: Failed to connect to BCS server at {self.host}:{self.port}")
-            print(f"✗ Error details: {str(e)}")
+            logger.error(f"Failed to connect to BCS server at {self.host}:{self.port}")
+            logger.error(f"Error details: {str(e)}")
             return False
-            
+
         finally:
             # Clean up resources
             socket.close(linger=0)
-            
+
         return False
 
     # Synchronous version of check_server_connection for backward compatibility
@@ -169,14 +159,14 @@ class BCSDeviceManager:
         """Connect to the BCS ZeroMQ server"""
         try:
             # Connect to the ZeroMQ server using the existing instance
-            print(f"Establishing secure connection to BCS server at {self.host}:{self.port}...")
+            logger.info(f"Establishing secure connection to BCS server at {self.host}:{self.port}...")
             await self.bcs_server.connect(self.host, self.port)
-            print(f"✓ Connected to BCS ZeroMQ server at {self.host}:{self.port}")
-            
+            logger.success(f"Connected to BCS ZeroMQ server at {self.host}:{self.port}")
+
             return True
-            
+
         except Exception as e:
-            print(f"Failed to connect to BCS ZeroMQ server: {e}")
+            logger.error(f"Failed to connect to BCS ZeroMQ server: {e}")
             raise ValueError(f"Connection to BCS server failed: {e}")
 
     # Asynchronous version of populate_client_from_config
@@ -185,23 +175,23 @@ class BCSDeviceManager:
         try:
             # Connect to BCS server
             await self.connect_to_bcs_server()
-            
+
             # Get configuration data using BCSServer
-            print("Retrieving device configuration from BCS server...")
+            logger.info("Retrieving device configuration from BCS server...")
             config_response = await self.bcs_server.get_bcsconfiguration()
-            
+
             if not config_response or not config_response.get("success", False):
                 error_msg = config_response.get("error_description", "Unknown error") if config_response else "No response"
                 raise RuntimeError(f"Failed to retrieve configuration data: {error_msg}")
-            
-            print("✓ Retrieved configuration from BCS server")
-            
+
+            logger.success("Retrieved configuration from BCS server")
+
             # Parse the configuration from the response
             config_data = {}
             if "configuration" in config_response:
                 try:
                     config_data = json.loads(config_response["configuration"])
-                    print("✓ Successfully parsed configuration data")
+                    logger.success("Successfully parsed configuration data")
                 except json.JSONDecodeError:
                     raise RuntimeError("Failed to parse configuration JSON data")
             else:
@@ -213,20 +203,18 @@ class BCSDeviceManager:
 
             # Process 'ai' section
             ai_data = config_data.get("ai", {}).get("AIs", [])
-            print("ai ai ai", ai_data)
+            logger.debug(f"Processing AI data: {len(ai_data)} items")
             self.parse_and_populate_ais(ai_data)
-            
+
             return True
-            
+
         except RuntimeError as e:
             # Catch RuntimeError and provide meaningful feedback
-            print(f"Runtime error occurred: {e}")
-            print("")
-            print("Possible solutions:")
-            print("")
-            print("1. Verify that the BCS ZeroMQ server is running and reachable.")
-            print(f"2. Check the connection to: {self.host}:{self.port}")
-            
+            logger.error(f"Runtime error occurred: {e}")
+            logger.info("Possible solutions:")
+            logger.info("1. Verify that the BCS ZeroMQ server is running and reachable.")
+            logger.info(f"2. Check the connection to: {self.host}:{self.port}")
+
             raise
 
     # Synchronous version of populate_client_from_config for backward compatibility
@@ -236,15 +224,15 @@ class BCSDeviceManager:
             # Create a new event loop for this function
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            
+
             # Run the async population in the new event loop
             loop.run_until_complete(self.populate_client_from_config_async())
-            
+
             # Clean up
             loop.close()
         except Exception as e:
             # Log error and exit
-            print(f"Error during client population: {e}")
+            logger.error(f"Error during client population: {e}")
             sys.exit(1)
         finally:
             # Restore the event loop
@@ -253,12 +241,12 @@ class BCSDeviceManager:
     # Parses and adds motors to the Happi client.
     def parse_and_populate_motors(self, motor_data):
         if not motor_data:
-            print("No motor data found in the configuration.")
+            logger.warning("No motor data found in the configuration.")
         else:
             ##################
             #     motors     #
             ##################
-            print(f"Processing {len(motor_data)} motors...")
+            logger.info(f"Processing {len(motor_data)} motors...")
 
             # iterates over each motor and adds to the DB
             for motor in motor_data:
@@ -369,19 +357,19 @@ class BCSDeviceManager:
                 )
 
                 self.client.add_item(motor_item)
-                print(f"✓ Added Motor: {name}")
+                logger.debug(f"Added Motor: {name}")
             
-            print(f"✓ Successfully processed {len(motor_data)} motors")
+            logger.success(f"Successfully processed {len(motor_data)} motors")
 
     # Parses and adds analog inputs (AIs) to the Happi client.
     def parse_and_populate_ais(self, ai_data):
         if not ai_data:
-            print("No AI data found in the configuration.")
+            logger.warning("No AI data found in the configuration.")
         else:
             ##############################
             #     analog inputs (ai)     #
             ##############################
-            print(f"Processing {len(ai_data)} analog inputs...")
+            logger.info(f"Processing {len(ai_data)} analog inputs...")
 
             # iterates over each analog input (ai) and adds to the DB
             for ai in ai_data:
@@ -454,18 +442,20 @@ class BCSDeviceManager:
                 )
 
                 self.client.add_item(ai_item)
-                print(f"✓ Added AI: {name}")
+                logger.debug(f"Added AI: {name}")
             
-            print(f"✓ Successfully processed {len(ai_data)} analog inputs")
+            logger.success(f"Successfully processed {len(ai_data)} analog inputs")
 
     def _sanitize_name(self, name: str) -> str:
         # Sanitize name
-        new_name = re.sub('\W|^(?=\d)','_', name).lower()
+        new_name = re.sub(r'\W|^(?=\d)', '_', name).lower()
 
-        if name in self.seen_names:
-            RuntimeError(f"A name collision occurred between new device {name}(-> {new_name}) and a device named "
-                         f"{self.seen_names[new_name]}(-> {new_name}. This should be corrected in the LabVIEW device "
-                         f"setup. Keep in mind that names will be sanitized to be a lowercase valid python identifiers")
+        if new_name in self.seen_names:
+            raise RuntimeError(
+                f"A name collision occurred between new device '{name}' (-> '{new_name}') and a device named "
+                f"'{self.seen_names[new_name]}' (-> '{new_name}'). This should be corrected in the LabVIEW device "
+                f"setup. Keep in mind that names will be sanitized to be lowercase valid Python identifiers."
+            )
         else:
             self.seen_names[new_name] = name
         return new_name

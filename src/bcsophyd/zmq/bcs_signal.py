@@ -1,19 +1,15 @@
 # Python Includes
+import asyncio
+import threading
+import time
 
-import asyncio    # For handling asynchronous operations
-import logging    # For logging errors
-import threading  # For thread safety
-import time       # For timestamps
+from loguru import logger
 
 # Bluesky Includes
 from ophyd.signal import Signal
 
 # BCS Includes
 from .bcs_server import BCSServer
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 class BCSSignal(Signal):
 

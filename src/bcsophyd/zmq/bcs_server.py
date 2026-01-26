@@ -10,10 +10,12 @@ Contact bcs@lbl.gov with questions / requests.
 import asyncio
 import json
 import sys
+import time
+
 import zmq
 import zmq.asyncio
 import zmq.utils.z85
-import time
+from loguru import logger
 
 if sys.platform[:3] == 'win':
     # zmq.asyncio does not support the default (proactor) event loop on windows.
@@ -71,7 +73,7 @@ class BCSServer:
     @staticmethod
     async def _get_server_public_key(addr, port):
         
-        print("get_server_public_key()")
+        logger.debug("get_server_public_key()")
 
         clear_socket = _zmq_context.socket(zmq.REQ)
         clear_socket.connect(f'tcp://{addr}:{port}')
@@ -89,7 +91,7 @@ class BCSServer:
 
         """(formerly the Constructor) Supply the zmq address string, addr, to reach this endstation."""
 
-        print("bcs_server.py - connect() " + addr + " " + str(port))
+        logger.debug(f"bcs_server.py - connect() {addr}:{port}")
 
         global _zmq_context
 
@@ -108,7 +110,7 @@ class BCSServer:
 
         server_public_key = await self._get_server_public_key(addr, port)
 
-        print(f'Server Public Key {server_public_key}')
+        logger.debug(f'Server Public Key {server_public_key}')
 
         self._zmq_socket.setsockopt(zmq.CURVE_SERVERKEY, server_public_key)
         self._zmq_socket.setsockopt(zmq.CURVE_PUBLICKEY, client_public_key)
@@ -116,7 +118,7 @@ class BCSServer:
 
         self._zmq_socket.connect(f'tcp://{addr}:{port + 1}')
 
-        print("end of connect()")
+        logger.debug("end of connect()")
 
     async def bcs_request(self, command_name, param_dict, debugging=False):
         """
@@ -128,7 +130,7 @@ class BCSServer:
         :type param_dict: dict
         """
         if debugging:
-            print(f"API command {command_name} BEGIN.")
+            logger.debug(f"API command {command_name} BEGIN.")
 
         api_call_start = time.time()
         param_dict['command'] = command_name
@@ -140,34 +142,37 @@ class BCSServer:
         response_dict['API_delta_t'] = time.time() - api_call_start
 
         if debugging:
-            print(f"API command {command_name} END {response_dict['API_delta_t']} s.")
+            logger.debug(f"API command {command_name} END {response_dict['API_delta_t']} s.")
 
         return response_dict
 
 # end BCSz_header.py
-    async def acquire_data(self, chans = [], time = 0, counts = 0) -> dict:
+    async def acquire_data(self, chans = [], duration = 0, counts = 0) -> dict:
         """
-        Acquires for ``time`` seconds, or ``counts`` counts. whichever is non-zero. **Waits for the acquision to complete** and returns data for channels specified in ``chans``.
-        If both ``counts`` *and* ``time`` are non-zero, which parameter takes precedence is not defined.
-    
+        Acquires for ``duration`` seconds, or ``counts`` counts. whichever is non-zero. **Waits for the acquision to complete** and returns data for channels specified in ``chans``.
+        If both ``counts`` *and* ``duration`` are non-zero, which parameter takes precedence is not defined.
+
         :param chans: AI channel names to acquire. An empty array will return data for all AI channels on the server.
         :type chans: list[str]
-        :param time: If non-zero, the amount of time to acquire.
-        :type time: float
+        :param duration: If non-zero, the amount of time to acquire (in seconds).
+        :type duration: float
         :param counts: If non-zero, the number of counts to acquire.
         :type counts: int
-    
+
         :return: Dictionary of results, with the following key(s).
-    
+
             * **chans** (*list[str]*) - The channel names that have data in the **data** array, in the same order.
-    
+
             * **not_found** (*list[str]*) - The requested channels in ``chans`` that were not found on the host system, if any.
-    
+
             * **data** (*list[float]*) - The acquired data, in the same order as the channel names in **chans**.
-    
-    
+
+
         """
-        return await self.bcs_request('AcquireData', dict(locals()))
+        # Map 'duration' back to 'time' for the server API
+        params = dict(locals())
+        params['time'] = params.pop('duration')
+        return await self.bcs_request('AcquireData', params)
     
     async def at_preset(self, name = "_none") -> dict:
         """
