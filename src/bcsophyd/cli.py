@@ -163,22 +163,36 @@ def devices(ctx, host, port, timeout, motors, signals, output_json):
         motor_list = []
         signal_list = []
 
-        for item in manager.client.items():
+        for item in manager.client.all_items:
+            # Get metadata from the item
+            metadata = item.metadata if hasattr(item, 'metadata') else item
+
+            # Handle both dict-like and object-like access
+            if hasattr(metadata, 'get'):
+                name = metadata.get('name', 'unknown')
+                device_class = metadata.get('device_class', '')
+                kwargs = metadata.get('kwargs', {})
+            else:
+                name = getattr(metadata, 'name', 'unknown')
+                device_class = getattr(metadata, 'device_class', '')
+                kwargs = getattr(metadata, 'kwargs', {})
+
             item_dict = {
-                "name": item.name,
-                "device_class": item.device_class,
+                "name": name,
+                "device_class": device_class,
             }
 
             # Add extra metadata if available
-            if hasattr(item, "kwargs") and item.kwargs:
-                if "originalName" in item.kwargs:
-                    item_dict["original_name"] = item.kwargs["originalName"]
-                if "units" in item.kwargs:
-                    item_dict["units"] = item.kwargs["units"]
+            if kwargs:
+                if isinstance(kwargs, dict):
+                    if "originalName" in kwargs:
+                        item_dict["original_name"] = kwargs["originalName"]
+                    if "units" in kwargs:
+                        item_dict["units"] = kwargs["units"]
 
-            if "motor" in item.device_class.lower():
+            if "motor" in device_class.lower():
                 motor_list.append(item_dict)
-            elif "signal" in item.device_class.lower():
+            elif "signal" in device_class.lower():
                 signal_list.append(item_dict)
 
         return motor_list, signal_list
