@@ -9,18 +9,36 @@ description = "A package for interacting with the Beamline Control System (BCS) 
 authors = [
   { name="Joao Gabriel Felipe Machado Gazolla", email="gabrielgazolla@lbl.gov" }
 ]
-license = { text = "MIT" }  # TODO: is this the license you want?
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
   "ophyd",
   "pyzmq",
-  "asyncio",
   "happi"
 ]
 
 [project.optional-dependencies]
 dev = ["bluesky", "matplotlib"]
+docs = [
+  "matplotlib",
+  "sphinx",
+  "sphinx-markdown-tables",
+  "numpydoc",
+  "sphinx_copybutton",
+  "myst_parser",
+  "sphinx_rtd_theme",
+  "sphinx_rtd_dark_mode"
+]
+tests = [
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "coverage",
+  "coveralls",
+  "codecov",
+  "pylint"
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -28,6 +46,14 @@ where = ["src"]
 [project.urls]
 "Homepage" = "https://git.als.lbl.gov/bcs/bluesky/bcsophyd-zmq"
 "Bug Tracker" = "https://git.als.lbl.gov/bcs/bluesky/bcsophyd-zmq/-/issues"
+"Documentation" = "https://git.als.lbl.gov/bcs/bluesky/bcsophyd-zmq"
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+  "integration: marks tests that require a running BCS server",
+]
+testpaths = ["tests"]
