@@ -1,5 +1,10 @@
 # bcsophyd-zmq
 
+[![Tests](https://github.com/als-controls/BCS-Ophyd-ZMQ/actions/workflows/tests.yml/badge.svg)](https://github.com/als-controls/BCS-Ophyd-ZMQ/actions/workflows/tests.yml)
+[![Documentation](https://readthedocs.org/projects/bcsophyd-zmq/badge/?version=latest)](https://bcsophyd-zmq.readthedocs.io/en/latest/)
+[![PyPI](https://img.shields.io/pypi/v/bcsophyd)](https://pypi.org/project/bcsophyd/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
+
 A Python package for interacting with the Beamline Control System (BCS) using ZeroMQ, providing Ophyd-compatible devices for use with the Bluesky data acquisition framework.
 
 ## Overview
