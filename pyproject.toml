@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bcsophyd"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A package for interacting with the Beamline Control System (BCS) using ZeroMQ."
 authors = [
   { name="Joao Gabriel Felipe Machado Gazolla", email="gabrielgazolla@lbl.gov" }
@@ -40,9 +40,6 @@ tests = [
   "pylint"
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [project.scripts]
 bcsophyd = "bcsophyd.cli:main"
 
@@ -53,6 +50,9 @@ bcsophyd = "bcsophyd.cli:main"
 
 [tool.hatch.version]
 source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bcsophyd"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
