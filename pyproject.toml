@@ -9,7 +9,7 @@ description = "A package for interacting with the Beamline Control System (BCS) 
 authors = [
   { name="Joao Gabriel Felipe Machado Gazolla", email="gabrielgazolla@lbl.gov" }
 ]
-license = { text = "MIT" }
+license = { text = "BSD-3-Clause" }
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
