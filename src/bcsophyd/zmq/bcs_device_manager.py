@@ -64,6 +64,7 @@ class BCSDeviceManager:
             self._connected = True
             return True
         except Exception as e:
+            logger.exception(e)
             logger.error(f"Error during initialization: {e}")
             logger.info("Possible solutions:")
             logger.info("- Check if BCS ZeroMQ server is running...")
@@ -198,11 +199,11 @@ class BCSDeviceManager:
                 raise RuntimeError("No configuration data found in response")
 
             # Process 'motor' section
-            motor_data = config_data.get("motor", {}).get("Motors", [])
+            motor_data = (config_data.get("motor", {}) or {}).get("Motors",  []) or []
             self.parse_and_populate_motors(motor_data)
 
             # Process 'ai' section
-            ai_data = config_data.get("ai", {}).get("AIs", [])
+            ai_data = (config_data.get("ai", {}) or {}).get("AIs", []) or []
             logger.debug(f"Processing AI data: {len(ai_data)} items")
             self.parse_and_populate_ais(ai_data)
 
