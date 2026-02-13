@@ -20,20 +20,23 @@ author = 'Joao Gabriel Felipe Machado Gazolla'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
+    'myst_parser',  # Markdown support
+    'sphinx.ext.autodoc',  # API documentation from docstrings
     'sphinx.ext.autosummary',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx',  # Link to other projects' documentation
+    'sphinx.ext.viewcode',  # Add links to source code
     'sphinx.ext.napoleon',
-    'numpydoc',
     'sphinx_copybutton',
-    'myst_parser',
-    'sphinx_rtd_dark_mode',
-    'sphinx_rtd_theme',
+    'sphinx_immaterial',  # Material theme extensions
 ]
 
 # MyST extensions
-myst_enable_extensions = ['colon_fence', 'deflist']
+myst_enable_extensions = [
+    'colon_fence',  # ::: directives
+    'deflist',  # Definition lists
+    'fieldlist',  # Field lists
+    'tasklist',  # Task lists with checkboxes
+]
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -45,7 +48,8 @@ plot_html_show_formats = False
 
 # Generate the API documentation when building
 autosummary_generate = True
-numpydoc_show_class_members = False
+napoleon_numpy_docstring = True
+napoleon_google_docstring = True
 
 # get versions
 try:
@@ -55,46 +59,71 @@ except ImportError:
     release = version = "0.1.0"
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-source_suffix = '.md'
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 # The master toctree document.
 master_doc = 'index'
 
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
-
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
-# -- Options for HTML output ----------------------------------------------
+# -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-import sphinx_rtd_theme
-html_theme = "sphinx_rtd_theme"
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-# html_logo = "_static/tsuchinoko-real.png"
-html_style = 'custom.css'
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-html_theme_options = dict(
-    display_version=True,
-    collapse_navigation=False,
-    titles_only=False
-)
-
-# user starts in dark mode
-default_dark_mode = True
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
+html_theme = 'sphinx_immaterial'
 html_static_path = ['_static']
+html_css_files = ['custom.css']
+html_title = 'bcsophyd Documentation'
+html_logo = '_static/bcsophyd.png'
+html_favicon = '_static/bcsophyd.png'
+
+# Theme options for sphinx-immaterial
+html_theme_options = {
+    "icon": {
+        "repo": "fontawesome/brands/gitlab",
+    },
+    "site_url": "https://git.als.lbl.gov/bcs/bluesky/bcsophyd-zmq",
+    "repo_url": "https://git.als.lbl.gov/bcs/bluesky/bcsophyd-zmq",
+    "repo_name": "bcsophyd-zmq",
+    "edit_uri": "blob/main/docs",
+    "globaltoc_collapse": True,
+    "features": [
+        "navigation.expand",
+        "navigation.sections",
+        "navigation.top",
+        "search.highlight",
+        "search.share",
+        "toc.follow",
+        "toc.sticky",
+        "content.tabs.link",
+        "announce.dismiss",
+    ],
+    "palette": [
+        {
+            "media": "(prefers-color-scheme: light)",
+            "scheme": "default",
+            "primary": "blue",
+            "accent": "light-blue",
+            "toggle": {
+                "icon": "material/brightness-7",
+                "name": "Switch to dark mode",
+            },
+        },
+        {
+            "media": "(prefers-color-scheme: dark)",
+            "scheme": "slate",
+            "primary": "blue",
+            "accent": "light-blue",
+            "toggle": {
+                "icon": "material/brightness-4",
+                "name": "Switch to light mode",
+            },
+        },
+    ],
+    "toc_title_is_page_title": True,
+}
 
 # -- Options for HTMLHelp output ------------------------------------------
 
@@ -106,10 +135,6 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
-    # 'pandas': ('https://pandas.pydata.org/pandas-docs/stable', None),
-    # 'matplotlib': ('https://matplotlib.org/stable', None),
-    # 'pyqtgraph': ("https://pyqtgraph.readthedocs.io/en/latest/", None),
-    # 'bluesky-adaptive': ("https://blueskyproject.io/bluesky-adaptive/", None),
 }
 
 autoclass_content = 'both'

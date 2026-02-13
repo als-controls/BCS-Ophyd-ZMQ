@@ -26,11 +26,9 @@ docs = [
   "matplotlib",
   "sphinx",
   "sphinx-markdown-tables",
-  "numpydoc",
   "sphinx_copybutton",
   "myst_parser",
-  "sphinx_rtd_theme",
-  "sphinx_rtd_dark_mode"
+  "sphinx_immaterial",
 ]
 tests = [
   "pytest",
