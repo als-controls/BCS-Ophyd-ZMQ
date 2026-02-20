@@ -64,6 +64,15 @@ class BCSMotor(Device, PositionerBase):
         # Use a lock to prevent concurrent access to the ZeroMQ server
         self._lock = threading.Lock()
 
+        # Fetch initial position from the server
+        try:
+            result = self.zmq_get_motor_full(self.originalName)
+            if result and len(result) > 0:
+                self._position = result[0].get('Raw Motor Position', 0)
+                logger.debug(f"BCSMotor - __init__() - Initial position: {self._position}")
+        except Exception as e:
+            logger.warning(f"BCSMotor - __init__() - Failed to fetch initial position: {e}")
+
         logger.debug("BCSMotor - __init__() - End.")
 
     # Ensure connection to the ZeroMQ server
