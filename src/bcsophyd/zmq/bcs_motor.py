@@ -120,24 +120,15 @@ class BCSMotor(Device, PositionerBase):
 
         return tempDescription
 
-    # Synchronous method to get the motor position
+    # Synchronous method to get the motor position - useful for testing
     def get(self):
         """
-        Synchronous method to get the current motor position.
-
-        Fetches the live position from the BCS server via ZMQ,
-        updates the internal cache, and returns the value.
+        Synchronous method to get the motor position.
+        This provides a simpler interface for basic testing.
 
         Returns:
             float: The current position of the motor
         """
-        try:
-            result = self.zmq_get_motor_full(self.originalName)
-            if result and len(result) > 0:
-                self._position = result[0].get('Raw Motor Position', self._position)
-        except Exception as e:
-            logger.warning(f"BCSMotor - get() - Failed to fetch live position: {e}")
-
         logger.debug(f"BCSMotor - get() - Returning current position: {self._position}")
         return self._position
 
