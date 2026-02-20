@@ -259,7 +259,7 @@ class BCSDeviceManager:
                 originalName = name
 
                 # sanitize name
-                name = self._sanitize_name(name)
+                name = self._sanitize_name(name, item_type="motor")
 
                 general_params   = motor.get("General Parameters", {})
                 itemType         = "motor"
@@ -382,7 +382,7 @@ class BCSDeviceManager:
                 originalName = name
 
                 # sanitize name
-                name = self._sanitize_name(name)
+                name = self._sanitize_name(name, item_type="ai")
 
                 general_settings = ai.get("General Settings", {})
                 itemType         = "ai"
@@ -447,16 +447,25 @@ class BCSDeviceManager:
             
             logger.success(f"Successfully processed {len(ai_data)} analog inputs")
 
-    def _sanitize_name(self, name: str) -> str:
+    def _sanitize_name(self, name: str, item_type: str = "") -> str:
         # Sanitize name
         new_name = re.sub(r'\W|^(?=\d)', '_', name).lower()
 
         if new_name in self.seen_names:
-            raise RuntimeError(
-                f"A name collision occurred between new device '{name}' (-> '{new_name}') and a device named "
-                f"'{self.seen_names[new_name]}' (-> '{new_name}'). This should be corrected in the LabVIEW device "
-                f"setup. Keep in mind that names will be sanitized to be lowercase valid Python identifiers."
+            original = self.seen_names[new_name]
+            # Auto-resolve by prefixing with item type, or appending a counter
+            if item_type:
+                new_name = f"{item_type}_{new_name}"
+            if new_name in self.seen_names:
+                counter = 1
+                base = new_name
+                while new_name in self.seen_names:
+                    new_name = f"{base}_{counter}"
+                    counter += 1
+            logger.warning(
+                f"Name collision: '{name}' (-> '{re.sub(r'\\W|^(?=\\d)', '_', name).lower()}') "
+                f"conflicts with '{original}'. Resolved to '{new_name}'."
             )
-        else:
-            self.seen_names[new_name] = name
+
+        self.seen_names[new_name] = name
         return new_name
